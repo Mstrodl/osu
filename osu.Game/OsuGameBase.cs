@@ -100,8 +100,7 @@ namespace osu.Game
         [BackgroundDependencyLoader]
         private void load()
         {
-            Resources.AddStore(new DllResourceStore(@"osu.Game.Resources.dll"));
-
+	    Resources.AddStore(new DllResourceStore(@"osu.Game.Resources.dll"));
             dependencies.Cache(contextFactory = new DatabaseContextFactory(Host));
 
             dependencies.Cache(new LargeTextureStore(new RawTextureLoaderStore(new NamespacedResourceStore<byte[]>(Resources, @"Textures"))));

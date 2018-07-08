@@ -12,7 +12,18 @@ This is still heavily under development and is not intended for end-user use. Th
 
 # Getting Started
 - Clone the repository including submodules (`git clone --recurse-submodules https://github.com/ppy/osu`)
-- Build in your IDE of choice (recommended IDEs automatically restore nuget packages; if you are using an alternative make sure to `nuget restore`)
+- Build in your IDE of choice (recommended IDEs automatically restore nuget packages; if you are using an alternative make sure to `nuget restore`) or [via CLI](#building-in-cli)
+
+# Building In CLI
+Restore nuget packages
+```
+dotnet restore
+```
+Build
+```
+msbuild /property:Configuration=Release
+```
+Binaries are in `osu.Desktop/bin/Release/net471`
 
 # Contributing
 

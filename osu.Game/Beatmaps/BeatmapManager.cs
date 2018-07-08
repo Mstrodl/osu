@@ -133,15 +133,15 @@ namespace osu.Game.Beatmaps
 
             if (existing != null || api == null) return;
 
-            if (!api.LocalUser.Value.IsSupporter)
-            {
-                PostNotification?.Invoke(new SimpleNotification
-                {
-                    Icon = FontAwesome.fa_superpowers,
-                    Text = "You gotta be a supporter to download for now 'yo"
-                });
-                return;
-            }
+            // if (!api.LocalUser.Value.IsSupporter)
+            // {
+            //     PostNotification?.Invoke(new SimpleNotification
+            //     {
+            //         Icon = FontAwesome.fa_superpowers,
+            //         Text = "You gotta be a supporter to download for now 'yo"
+            //     });
+            //     return;
+            // }
 
             var downloadNotification = new ProgressNotification
             {
@@ -165,6 +165,7 @@ namespace osu.Game.Beatmaps
                 {
                     // This gets scheduled back to the update thread, but we want the import to run in the background.
                     using (var stream = new MemoryStream(data))
+		    
                     using (var archive = new ZipArchiveReader(stream, beatmapSetInfo.ToString()))
                         Import(archive);
 

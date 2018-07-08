@@ -160,6 +160,8 @@ namespace osu.Game.Beatmaps
             request.Success += data =>
             {
                 downloadNotification.Text = $"Importing {beatmapSetInfo.Metadata.Artist} - {beatmapSetInfo.Metadata.Title}";
+		string textualData = System.Text.Encoding.UTF8.GetString(data);
+		Console.Write(textualData);
 
                 Task.Factory.StartNew(() =>
                 {

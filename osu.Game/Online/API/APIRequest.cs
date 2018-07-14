@@ -42,6 +42,8 @@ namespace osu.Game.Online.API
 
         protected virtual string Target => string.Empty;
 
+	protected virtual string OsuSessionCookie => string.Empty;
+
         protected virtual WebRequest CreateWebRequest() => new WebRequest(Uri);
 
         protected virtual string Uri => $@"{API.Endpoint}/api/v2/{Target}";
@@ -87,7 +89,12 @@ namespace osu.Game.Online.API
             WebRequest = CreateWebRequest();
             WebRequest.Failed += Fail;
             WebRequest.AllowRetryOnTimeout = false;
-            WebRequest.AddHeader("Authorization", $"Bearer {api.AccessToken}");
+
+	    if(OsuSessionCookie != string.Empty) {
+		WebRequest.AddHeader("Cookie", $"osu_session={OsuSessionCookie}");
+	    } else {
+		WebRequest.AddHeader("Authorization", $"Bearer {api.AccessToken}");
+	    }
 
             if (checkAndProcessFailure())
                 return;

@@ -26,7 +26,20 @@ Build and run
 - Using Visual Studio 2017, Rider or Visual Studio Code (configurations are included)
 - From command line using `dotnet run --project osu.Desktop --framework netcoreapp2.1`
 
-The above methods should automatically do so, but if you run into issues building you may need to restore nuget packages (commonly via `dotnet restore`).
+# Getting Started
+- Clone the repository including submodules (`git clone --recurse-submodules https://github.com/ppy/osu`)
+- Build in your IDE of choice (recommended IDEs automatically restore nuget packages; if you are using an alternative make sure to `nuget restore`) or [via CLI](#building-in-cli)
+
+# Building In CLI
+Restore nuget packages
+```
+dotnet restore
+```
+Build
+```
+msbuild /property:Configuration=Release
+```
+Binaries are in `osu.Desktop/bin/Release/net471`
 
 # Contributing
 

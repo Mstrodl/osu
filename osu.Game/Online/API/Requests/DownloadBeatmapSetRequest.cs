@@ -22,6 +22,10 @@ namespace osu.Game.Online.API.Requests
             Progress += (current, total) => DownloadProgressed?.Invoke((float) current / total);
         }
 
-        protected override string Target => $@"beatmapsets/{BeatmapSet.OnlineBeatmapSetID}/download{(noVideo ? "?noVideo=1" : "")}";
+	// TODO: Just overwrite `Uri` instead lol
+        protected override string Target => $@"../../beatmapsets/{BeatmapSet.OnlineBeatmapSetID}/download{(noVideo ? "?noVideo=1" : "")}";
+
+	// TODO: Investigate a better place for this or (even better) perform user logins on our own
+	protected override string OsuSessionCookie => System.Environment.GetEnvironmentVariable("OSU_SESSION_KEY");
     }
 }

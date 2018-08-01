@@ -40,6 +40,8 @@ Build
 msbuild /property:Configuration=Release
 ```
 Binaries are in `osu.Desktop/bin/Release/net471`
+=======
+If you run into issues building you may need to restore nuget packages (commonly via `dotnet restore`). Visual Studio Code users must run `Restore` task from debug tab before attempt to build.
 
 # Contributing
 

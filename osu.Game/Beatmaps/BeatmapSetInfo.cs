@@ -10,16 +10,17 @@ namespace osu.Game.Beatmaps
 {
     public class BeatmapSetInfo : IHasPrimaryKey, IHasFiles<BeatmapSetFileInfo>, ISoftDelete
     {
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
         private int? onlineBeatmapSetID;
 
         public int? OnlineBeatmapSetID
         {
-            get { return onlineBeatmapSetID; }
-            set { onlineBeatmapSetID = value > 0 ? value : null; }
+            get => onlineBeatmapSetID;
+            set => onlineBeatmapSetID = value > 0 ? value : null;
         }
+
+        public BeatmapSetOnlineStatus Status { get; set; } = BeatmapSetOnlineStatus.None;
 
         public BeatmapMetadata Metadata { get; set; }
 

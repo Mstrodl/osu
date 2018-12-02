@@ -3,8 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using OpenTK.Input;
+using osuTK.Input;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
@@ -17,9 +16,9 @@ using osu.Game.Graphics;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
 using osu.Game.Rulesets.Mods;
-using osu.Game.Screens.Edit;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Ranking;
+using osu.Game.Skinning;
 
 namespace osu.Game.Screens.Select
 {
@@ -50,13 +49,14 @@ namespace osu.Game.Screens.Select
 
         private SampleChannel sampleConfirm;
 
-        public readonly Bindable<IEnumerable<Mod>> SelectedMods = new Bindable<IEnumerable<Mod>>(new List<Mod>());
+        [Cached]
+        [Cached(Type = typeof(IBindable<IEnumerable<Mod>>))]
+        private readonly Bindable<IEnumerable<Mod>> selectedMods = new Bindable<IEnumerable<Mod>>(new Mod[] { });
 
         [BackgroundDependencyLoader(true)]
-        private void load(OsuColour colours, AudioManager audio, BeatmapManager beatmaps, DialogOverlay dialogOverlay, OsuGame osu)
+        private void load(OsuColour colours, AudioManager audio, BeatmapManager beatmaps, SkinManager skins, DialogOverlay dialogOverlay, Bindable<IEnumerable<Mod>> selectedMods)
         {
-            if (osu != null) SelectedMods.BindTo(osu.SelectedMods);
-            modSelect.SelectedMods.BindTo(SelectedMods);
+            if (selectedMods != null) this.selectedMods.BindTo(selectedMods);
 
             sampleConfirm = audio.Sample.Get(@"SongSelect/confirm-selection");
 
@@ -64,10 +64,10 @@ namespace osu.Game.Screens.Select
 
             BeatmapOptions.AddButton(@"Remove", @"from unplayed", FontAwesome.fa_times_circle_o, colours.Purple, null, Key.Number1);
             BeatmapOptions.AddButton(@"Clear", @"local scores", FontAwesome.fa_eraser, colours.Purple, null, Key.Number2);
-            BeatmapOptions.AddButton(@"Edit", @"Beatmap", FontAwesome.fa_pencil, colours.Yellow, () =>
+            BeatmapOptions.AddButton(@"Edit", @"beatmap", FontAwesome.fa_pencil, colours.Yellow, () =>
             {
                 ValidForResume = false;
-                Push(new Editor());
+                Edit();
             }, Key.Number3);
 
             if (dialogOverlay != null)
@@ -77,14 +77,17 @@ namespace osu.Game.Screens.Select
                     // if we have no beatmaps but osu-stable is found, let's prompt the user to import.
                     if (!beatmaps.GetAllUsableBeatmapSets().Any() && beatmaps.StableInstallationAvailable)
                         dialogOverlay.Push(new ImportFromStablePopup(() =>
-                            Task.Factory.StartNew(beatmaps.ImportFromStable, TaskCreationOptions.LongRunning)));
+                        {
+                            beatmaps.ImportFromStableAsync();
+                            skins.ImportFromStableAsync();
+                        }));
                 });
             }
         }
 
         protected override void UpdateBeatmap(WorkingBeatmap beatmap)
         {
-            beatmap.Mods.BindTo(SelectedMods);
+            beatmap.Mods.BindTo(selectedMods);
 
             base.UpdateBeatmap(beatmap);
 
@@ -104,6 +107,8 @@ namespace osu.Game.Screens.Select
                 modSelect.DeselectTypes(new[] { autoType }, true);
                 removeAutoModOnResume = false;
             }
+
+            BeatmapDetails.Leaderboard.RefreshScores();
 
             Beatmap.Value.Track.Looping = true;
 
@@ -131,7 +136,7 @@ namespace osu.Game.Screens.Select
             if (Beatmap.Value.Track != null)
                 Beatmap.Value.Track.Looping = false;
 
-            SelectedMods.UnbindAll();
+            selectedMods.UnbindAll();
             Beatmap.Value.Mods.Value = new Mod[] { };
 
             return false;
@@ -147,10 +152,10 @@ namespace osu.Game.Screens.Select
                 var auto = Ruleset.Value.CreateInstance().GetAutoplayMod();
                 var autoType = auto.GetType();
 
-                var mods = modSelect.SelectedMods.Value;
+                var mods = selectedMods.Value;
                 if (mods.All(m => m.GetType() != autoType))
                 {
-                    modSelect.SelectedMods.Value = mods.Append(auto);
+                    selectedMods.Value = mods.Append(auto);
                     removeAutoModOnResume = true;
                 }
             }

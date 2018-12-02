@@ -3,8 +3,8 @@
 
 using System;
 using System.Linq;
-using OpenTK;
-using OpenTK.Input;
+using osuTK;
+using osuTK.Input;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
@@ -13,8 +13,7 @@ using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Logging;
-using osu.Framework.Input.EventArgs;
-using osu.Framework.Input.States;
+using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
@@ -40,6 +39,8 @@ namespace osu.Game.Screens.Select
         public readonly FilterControl FilterControl;
 
         protected virtual bool ShowFooter => true;
+
+        public override bool AllowExternalScreenChange => true;
 
         /// <summary>
         /// Can be null if <see cref="ShowFooter"/> is false.
@@ -205,7 +206,7 @@ namespace osu.Game.Screens.Select
                 Footer.AddButton(@"random", colours.Green, triggerRandom, Key.F2);
                 Footer.AddButton(@"options", colours.Blue, BeatmapOptions, Key.F3);
 
-                BeatmapOptions.AddButton(@"Delete", @"Beatmap", FontAwesome.fa_trash, colours.Pink, () => delete(Beatmap.Value.BeatmapSetInfo), Key.Number4, float.MaxValue);
+                BeatmapOptions.AddButton(@"Delete", @"all difficulties", FontAwesome.fa_trash, colours.Pink, () => delete(Beatmap.Value.BeatmapSetInfo), Key.Number4, float.MaxValue);
             }
 
             if (this.beatmaps == null)
@@ -221,12 +222,12 @@ namespace osu.Game.Screens.Select
             sampleChangeDifficulty = audio.Sample.Get(@"SongSelect/select-difficulty");
             sampleChangeBeatmap = audio.Sample.Get(@"SongSelect/select-expand");
 
-            Carousel.BeatmapSets = this.beatmaps.GetAllUsableBeatmapSetsEnumerable();
+            Carousel.LoadBeatmapSetsFromManager(this.beatmaps);
         }
 
-        public void Edit(BeatmapInfo beatmap)
+        public void Edit(BeatmapInfo beatmap = null)
         {
-            Beatmap.Value = beatmaps.GetWorkingBeatmap(beatmap, Beatmap.Value);
+            Beatmap.Value = beatmaps.GetWorkingBeatmap(beatmap ?? beatmapNoDebounce);
             Push(new Editor());
         }
 
@@ -314,13 +315,13 @@ namespace osu.Game.Screens.Select
             {
                 Logger.Log($"updating selection with beatmap:{beatmap?.ID.ToString() ?? "null"} ruleset:{ruleset?.ID.ToString() ?? "null"}");
 
-                WorkingBeatmap working = Beatmap.Value;
-
                 bool preview = false;
 
                 if (ruleset?.Equals(Ruleset.Value) == false)
                 {
                     Logger.Log($"ruleset changed from \"{Ruleset.Value}\" to \"{ruleset}\"");
+
+                    Beatmap.Value.Mods.Value = Enumerable.Empty<Mod>();
                     Ruleset.Value = ruleset;
 
                     // force a filter before attempting to change the beatmap.
@@ -340,7 +341,7 @@ namespace osu.Game.Screens.Select
                     Logger.Log($"beatmap changed from \"{Beatmap.Value.BeatmapInfo}\" to \"{beatmap}\"");
 
                     preview = beatmap?.BeatmapSetInfoID != Beatmap.Value?.BeatmapInfo.BeatmapSetInfoID;
-                    working = beatmaps.GetWorkingBeatmap(beatmap, Beatmap.Value);
+                    Beatmap.Value = beatmaps.GetWorkingBeatmap(beatmap, Beatmap.Value);
 
                     if (beatmap != null)
                     {
@@ -351,10 +352,7 @@ namespace osu.Game.Screens.Select
                     }
                 }
 
-                working.Mods.Value = Enumerable.Empty<Mod>();
-                Beatmap.Value = working;
-
-                ensurePlayingSelected(preview);
+                if (IsCurrentScreen) ensurePlayingSelected(preview);
                 UpdateBeatmap(Beatmap.Value);
             }
 
@@ -463,6 +461,8 @@ namespace osu.Game.Screens.Select
         {
             base.Dispose(isDisposing);
 
+            Ruleset.UnbindAll();
+
             if (beatmaps != null)
             {
                 beatmaps.ItemAdded -= onBeatmapSetAdded;
@@ -505,7 +505,7 @@ namespace osu.Game.Screens.Select
             }
         }
 
-        private void onBeatmapSetAdded(BeatmapSetInfo s) => Carousel.UpdateBeatmapSet(s);
+        private void onBeatmapSetAdded(BeatmapSetInfo s, bool existing, bool silent) => Carousel.UpdateBeatmapSet(s);
         private void onBeatmapSetRemoved(BeatmapSetInfo s) => Carousel.RemoveBeatmapSet(s);
         private void onBeatmapRestored(BeatmapInfo b) => Carousel.UpdateBeatmapSet(beatmaps.QueryBeatmapSet(s => s.ID == b.BeatmapSetInfoID));
         private void onBeatmapHidden(BeatmapInfo b) => Carousel.UpdateBeatmapSet(beatmaps.QueryBeatmapSet(s => s.ID == b.BeatmapSetInfoID));
@@ -537,7 +537,7 @@ namespace osu.Game.Screens.Select
 
         private void delete(BeatmapSetInfo beatmap)
         {
-            if (beatmap == null) return;
+            if (beatmap == null || beatmap.ID <= 0) return;
             dialogOverlay?.Push(new BeatmapDeleteDialog(beatmap));
         }
 
@@ -555,14 +555,14 @@ namespace osu.Game.Screens.Select
             return base.OnPressed(action);
         }
 
-        protected override bool OnKeyDown(InputState state, KeyDownEventArgs args)
+        protected override bool OnKeyDown(KeyDownEvent e)
         {
-            if (args.Repeat) return false;
+            if (e.Repeat) return false;
 
-            switch (args.Key)
+            switch (e.Key)
             {
                 case Key.Delete:
-                    if (state.Keyboard.ShiftPressed)
+                    if (e.ShiftPressed)
                     {
                         if (!Beatmap.IsDefault)
                             delete(Beatmap.Value.BeatmapSetInfo);
@@ -572,7 +572,7 @@ namespace osu.Game.Screens.Select
                     break;
             }
 
-            return base.OnKeyDown(state, args);
+            return base.OnKeyDown(e);
         }
 
         private class ResetScrollContainer : Container
@@ -584,10 +584,10 @@ namespace osu.Game.Screens.Select
                 this.onHoverAction = onHoverAction;
             }
 
-            protected override bool OnHover(InputState state)
+            protected override bool OnHover(HoverEvent e)
             {
                 onHoverAction?.Invoke();
-                return base.OnHover(state);
+                return base.OnHover(e);
             }
         }
     }

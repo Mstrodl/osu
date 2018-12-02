@@ -2,20 +2,20 @@
 // Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
 
 using System.Linq;
-using OpenTK;
-using OpenTK.Graphics;
+using osuTK;
+using osuTK.Graphics;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Input.States;
+using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
-using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI;
+using osu.Game.Scoring;
 using osu.Game.Users;
 
 namespace osu.Game.Screens.Select.Leaderboards
@@ -25,7 +25,7 @@ namespace osu.Game.Screens.Select.Leaderboards
         public static readonly float HEIGHT = 60;
 
         public readonly int RankPosition;
-        public readonly Score Score;
+        public readonly ScoreInfo Score;
 
         private const float corner_radius = 5;
         private const float edge_margin = 5;
@@ -43,7 +43,7 @@ namespace osu.Game.Screens.Select.Leaderboards
         private Container flagBadgeContainer;
         private FillFlowContainer<ModIcon> modsContainer;
 
-        public LeaderboardScore(Score score, int rank)
+        public LeaderboardScore(ScoreInfo score, int rank)
         {
             Score = score;
             RankPosition = rank;
@@ -251,16 +251,16 @@ namespace osu.Game.Screens.Select.Leaderboards
             }
         }
 
-        protected override bool OnHover(InputState state)
+        protected override bool OnHover(HoverEvent e)
         {
             background.FadeTo(0.5f, 300, Easing.OutQuint);
-            return base.OnHover(state);
+            return base.OnHover(e);
         }
 
-        protected override void OnHoverLost(InputState state)
+        protected override void OnHoverLost(HoverLostEvent e)
         {
             background.FadeTo(background_alpha, 200, Easing.OutQuint);
-            base.OnHoverLost(state);
+            base.OnHoverLost(e);
         }
 
         private class GlowingSpriteText : Container

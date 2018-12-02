@@ -16,6 +16,7 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
     {
         private readonly bool includeWeight;
         private readonly ScoreType type;
+        private GetUserScoresRequest request;
 
         public PaginatedScoreContainer(ScoreType type, Bindable<User> user, string header, string missing, bool includeWeight = false)
             : base(user, header, missing)
@@ -32,12 +33,11 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
         {
             base.ShowMore();
 
-            var req = new GetUserScoresRequest(User.Value.Id, type, VisiblePages++ * ItemsPerPage);
-
-            req.Success += scores =>
+            request = new GetUserScoresRequest(User.Value.Id, type, VisiblePages++ * ItemsPerPage);
+            request.Success += scores => Schedule(() =>
             {
                 foreach (var s in scores)
-                    s.ApplyRuleset(Rulesets.GetRuleset(s.OnlineRulesetID));
+                    s.Ruleset = Rulesets.GetRuleset(s.RulesetID);
 
                 ShowMoreButton.FadeTo(scores.Count == ItemsPerPage ? 1 : 0);
                 ShowMoreLoading.Hide();
@@ -50,7 +50,7 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
 
                 MissingText.Hide();
 
-                foreach (APIScore score in scores)
+                foreach (APIScoreInfo score in scores)
                 {
                     DrawableProfileScore drawableScore;
 
@@ -66,9 +66,15 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
 
                     ItemsContainer.Add(drawableScore);
                 }
-            };
+            });
 
-            Api.Queue(req);
+            Api.Queue(request);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            request?.Cancel();
         }
     }
 }

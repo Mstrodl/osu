@@ -12,7 +12,7 @@ using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
-using osu.Framework.Input.States;
+using osu.Framework.Input.Events;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
@@ -27,6 +27,7 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI;
+using osu.Game.Scoring;
 using osu.Game.Screens.Ranking;
 using osu.Game.Skinning;
 using osu.Game.Storyboards.Drawables;
@@ -35,6 +36,8 @@ namespace osu.Game.Screens.Play
 {
     public class Player : ScreenWithBeatmapBackground, IProvideCursor
     {
+        protected override bool AllowBackButton => false; // handled by HoldForMenuButton
+
         protected override float BackgroundParallaxAmount => 0.1f;
 
         protected override bool HideOverlaysOnEnter => true;
@@ -63,6 +66,9 @@ namespace osu.Game.Screens.Play
         /// The decoupled clock used for gameplay. Should be used for seeks and clock control.
         /// </summary>
         private DecoupleableInterpolatingFramedClock adjustableClock;
+
+        [Resolved]
+        private ScoreManager scoreManager { get; set; }
 
         private PauseContainer pauseContainer;
 
@@ -124,7 +130,7 @@ namespace osu.Game.Screens.Play
 
                 if (!RulesetContainer.Objects.Any())
                 {
-                    Logger.Error(new InvalidOperationException("Beatmap contains no hit objects!"), "Beatmap contains no hit objects!");
+                    Logger.Log("Beatmap contains no hit objects!", level: LogLevel.Error);
                     return;
                 }
             }
@@ -213,7 +219,7 @@ namespace osu.Game.Screens.Play
                     {
                         if (!IsCurrentScreen) return;
 
-                        pauseContainer.Hide();
+                        fadeOut(true);
                         Restart();
                     },
                 }
@@ -270,18 +276,29 @@ namespace osu.Game.Screens.Play
                 {
                     if (!IsCurrentScreen) return;
 
-                    var score = new Score
-                    {
-                        Beatmap = Beatmap.Value.BeatmapInfo,
-                        Ruleset = ruleset
-                    };
-                    ScoreProcessor.PopulateScore(score);
-                    score.User = RulesetContainer.Replay?.User ?? api.LocalUser.Value;
+                    var score = CreateScore();
+                    if (RulesetContainer.Replay == null)
+                        scoreManager.Import(score, true);
+
                     Push(new Results(score));
 
                     onCompletionEvent = null;
                 });
             }
+        }
+
+        protected virtual ScoreInfo CreateScore()
+        {
+            var score = new ScoreInfo
+            {
+                Beatmap = Beatmap.Value.BeatmapInfo,
+                Ruleset = ruleset,
+                User = api.LocalUser.Value
+            };
+
+            ScoreProcessor.PopulateScore(score);
+
+            return score;
         }
 
         private bool onFail()
@@ -364,19 +381,13 @@ namespace osu.Game.Screens.Play
             return true;
         }
 
-        private void fadeOut()
+        private void fadeOut(bool instant = false)
         {
-            const float fade_out_duration = 250;
-
-            RulesetContainer?.FadeOut(fade_out_duration);
-            Content.FadeOut(fade_out_duration);
-
-            hudOverlay?.ScaleTo(0.7f, fade_out_duration * 3, Easing.In);
-
-            Background?.FadeTo(1f, fade_out_duration);
+            float fadeOutDuration = instant ? 0 : 250;
+            Content.FadeOut(fadeOutDuration);
         }
 
-        protected override bool OnScroll(InputState state) => mouseWheelDisabled.Value && !pauseContainer.IsPaused;
+        protected override bool OnScroll(ScrollEvent e) => mouseWheelDisabled.Value && !pauseContainer.IsPaused;
 
         private void initializeStoryboard(bool asyncLoad)
         {

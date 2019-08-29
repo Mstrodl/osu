@@ -1,72 +1,46 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
-using System.ComponentModel;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Framework.Graphics;
-using System.Linq;
-using osu.Game.Rulesets.Objects.Types;
-using osu.Game.Skinning;
-using OpenTK.Graphics;
+using osu.Game.Rulesets.Judgements;
+using osu.Game.Rulesets.Osu.Judgements;
+using osu.Game.Graphics.Containers;
 
 namespace osu.Game.Rulesets.Osu.Objects.Drawables
 {
     public class DrawableOsuHitObject : DrawableHitObject<OsuHitObject>
     {
-        public override bool IsPresent => base.IsPresent || State.Value == ArmedState.Idle && Time.Current >= HitObject.StartTime - HitObject.TimePreempt;
+        private readonly ShakeContainer shakeContainer;
+
+        // Must be set to update IsHovered as it's used in relax mdo to detect osu hit objects.
+        public override bool HandlePositionalInput => true;
 
         protected DrawableOsuHitObject(OsuHitObject hitObject)
             : base(hitObject)
         {
+            base.AddInternal(shakeContainer = new ShakeContainer
+            {
+                ShakeDuration = 30,
+                RelativeSizeAxes = Axes.Both
+            });
+
             Alpha = 0;
         }
 
-        protected sealed override void UpdateState(ArmedState state)
-        {
-            double transformTime = HitObject.StartTime - HitObject.TimePreempt;
+        // Forward all internal management to shakeContainer.
+        // This is a bit ugly but we don't have the concept of InternalContent so it'll have to do for now. (https://github.com/ppy/osu-framework/issues/1690)
+        protected override void AddInternal(Drawable drawable) => shakeContainer.Add(drawable);
+        protected override void ClearInternal(bool disposeChildren = true) => shakeContainer.Clear(disposeChildren);
+        protected override bool RemoveInternal(Drawable drawable) => shakeContainer.Remove(drawable);
 
-            base.ApplyTransformsAt(transformTime, true);
-            base.ClearTransformsAfter(transformTime, true);
-
-            using (BeginAbsoluteSequence(transformTime, true))
-            {
-                UpdatePreemptState();
-
-                using (BeginDelayedSequence(HitObject.TimePreempt + (Judgements.FirstOrDefault()?.TimeOffset ?? 0), true))
-                    UpdateCurrentState(state);
-            }
-        }
-
-        protected override void SkinChanged(ISkinSource skin, bool allowFallback)
-        {
-            base.SkinChanged(skin, allowFallback);
-
-            if (HitObject is IHasComboInformation combo)
-                AccentColour = skin.GetValue<SkinConfiguration, Color4>(s => s.ComboColours.Count > 0 ? s.ComboColours[combo.ComboIndex % s.ComboColours.Count] : (Color4?)null) ?? Color4.White;
-        }
-
-        protected virtual void UpdatePreemptState() => this.FadeIn(HitObject.TimeFadein);
-
-        protected virtual void UpdateCurrentState(ArmedState state)
-        {
-        }
-
-        // Todo: At some point we need to move these to DrawableHitObject after ensuring that all other Rulesets apply
-        // transforms in the same way and don't rely on them not being cleared
-        public override void ClearTransformsAfter(double time, bool propagateChildren = false, string targetMember = null) { }
-        public override void ApplyTransformsAt(double time, bool propagateChildren = false) { }
+        protected sealed override double InitialLifetimeOffset => HitObject.TimePreempt;
 
         private OsuInputManager osuActionInputManager;
         internal OsuInputManager OsuActionInputManager => osuActionInputManager ?? (osuActionInputManager = GetContainingInputManager() as OsuInputManager);
-    }
 
-    public enum ComboResult
-    {
-        [Description(@"")]
-        None,
-        [Description(@"Good")]
-        Good,
-        [Description(@"Amazing")]
-        Perfect
+        protected virtual void Shake(double maximumLength) => shakeContainer.Shake(maximumLength);
+
+        protected override JudgementResult CreateResult(Judgement judgement) => new OsuJudgementResult(judgement);
     }
 }

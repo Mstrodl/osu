@@ -1,10 +1,10 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Audio.Sample;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Textures;
-using OpenTK.Graphics;
+using osu.Game.Audio;
 
 namespace osu.Game.Skinning
 {
@@ -13,22 +13,13 @@ namespace osu.Game.Skinning
         public DefaultSkin()
             : base(SkinInfo.Default)
         {
-            Configuration = new SkinConfiguration
-            {
-                ComboColours =
-                {
-                    new Color4(17, 136, 170, 255),
-                    new Color4(102, 136, 0, 255),
-                    new Color4(204, 102, 0, 255),
-                    new Color4(121, 9, 13, 255)
-                }
-            };
+            Configuration = new SkinConfiguration();
         }
 
         public override Drawable GetDrawableComponent(string componentName) => null;
 
         public override Texture GetTexture(string componentName) => null;
 
-        public override SampleChannel GetSample(string sampleName) => null;
+        public override SampleChannel GetSample(ISampleInfo sampleInfo) => null;
     }
 }

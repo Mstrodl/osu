@@ -1,5 +1,5 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
@@ -27,7 +27,7 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables.Pieces
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Texture = textures.Get(name),
-                Blending = BlendingMode.Additive,
+                Blending = BlendingParameters.Additive,
                 Alpha = 0.5f
             }, s => s.GetTexture("Play/osu/hitcircle") == null);
         }

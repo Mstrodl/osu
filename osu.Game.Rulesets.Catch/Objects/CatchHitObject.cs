@@ -1,8 +1,9 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Rulesets.Catch.Beatmaps;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 
@@ -12,20 +13,37 @@ namespace osu.Game.Rulesets.Catch.Objects
     {
         public const double OBJECT_RADIUS = 44;
 
-        public float X { get; set; }
+        private float x;
+
+        public float X
+        {
+            get => x + XOffset;
+            set => x = value;
+        }
+
+        /// <summary>
+        /// A random offset applied to <see cref="X"/>, set by the <see cref="CatchBeatmapProcessor"/>.
+        /// </summary>
+        internal float XOffset { get; set; }
+
+        public double TimePreempt = 1000;
 
         public int IndexInBeatmap { get; set; }
 
-        public virtual FruitVisualRepresentation VisualRepresentation => (FruitVisualRepresentation)(IndexInBeatmap % 4);
+        public virtual FruitVisualRepresentation VisualRepresentation => (FruitVisualRepresentation)(ComboIndex % 4);
 
         public virtual bool NewCombo { get; set; }
+
+        public int ComboOffset { get; set; }
 
         public int IndexInCurrentCombo { get; set; }
 
         public int ComboIndex { get; set; }
 
         /// <summary>
-        /// The distance for a fruit to to next hyper if it's not a hyper.
+        /// Difference between the distance to the next object
+        /// and the distance that would have triggered a hyper dash.
+        /// A value close to 0 indicates a difficult jump (for difficulty calculation).
         /// </summary>
         public float DistanceToHyperDash { get; set; }
 
@@ -49,6 +67,8 @@ namespace osu.Game.Rulesets.Catch.Objects
         protected override void ApplyDefaultsToSelf(ControlPointInfo controlPointInfo, BeatmapDifficulty difficulty)
         {
             base.ApplyDefaultsToSelf(controlPointInfo, difficulty);
+
+            TimePreempt = (float)BeatmapDifficulty.DifficultyRange(difficulty.ApproachRate, 1800, 1200, 450);
 
             Scale = 1.0f - 0.7f * (difficulty.CircleSize - 5) / 5;
         }

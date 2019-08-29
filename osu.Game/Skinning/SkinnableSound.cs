@@ -1,7 +1,7 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -13,14 +13,19 @@ namespace osu.Game.Skinning
 {
     public class SkinnableSound : SkinReloadableDrawable
     {
-        private readonly SampleInfo[] samples;
+        private readonly ISampleInfo[] hitSamples;
         private SampleChannel[] channels;
 
         private AudioManager audio;
 
-        public SkinnableSound(params SampleInfo[] samples)
+        public SkinnableSound(IEnumerable<ISampleInfo> hitSamples)
         {
-            this.samples = samples;
+            this.hitSamples = hitSamples.ToArray();
+        }
+
+        public SkinnableSound(ISampleInfo hitSamples)
+        {
+            this.hitSamples = new[] { hitSamples };
         }
 
         [BackgroundDependencyLoader]
@@ -31,30 +36,32 @@ namespace osu.Game.Skinning
 
         public void Play() => channels?.ForEach(c => c.Play());
 
+        public override bool IsPresent => Scheduler.HasPendingTasks;
+
         protected override void SkinChanged(ISkinSource skin, bool allowFallback)
         {
-            channels = samples.Select(s =>
+            channels = hitSamples.Select(s =>
             {
-                var ch = loadChannel(s, skin.GetSample);
+                var ch = skin.GetSample(s);
+
                 if (ch == null && allowFallback)
-                    ch = loadChannel(s, audio.Sample.Get);
+                    foreach (var lookup in s.LookupNames)
+                        if ((ch = audio.Samples.Get($"Gameplay/{lookup}")) != null)
+                            break;
+
+                if (ch != null)
+                    ch.Volume.Value = s.Volume / 100.0;
+
                 return ch;
             }).Where(c => c != null).ToArray();
         }
 
-        private SampleChannel loadChannel(SampleInfo info, Func<string, SampleChannel> getSampleFunction)
+        protected override void Dispose(bool isDisposing)
         {
-            foreach (var lookup in info.LookupNames)
-            {
-                var ch = getSampleFunction($"Gameplay/{lookup}");
-                if (ch == null)
-                    continue;
+            base.Dispose(isDisposing);
 
-                ch.Volume.Value = info.Volume / 100.0;
-                return ch;
-            }
-
-            return null;
+            foreach (var c in channels)
+                c.Dispose();
         }
     }
 }

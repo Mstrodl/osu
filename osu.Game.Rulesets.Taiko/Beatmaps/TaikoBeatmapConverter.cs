@@ -1,5 +1,5 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Objects;
@@ -62,7 +62,7 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
                 converted.HitObjects = converted.HitObjects.GroupBy(t => t.StartTime).Select(x =>
                 {
                     TaikoHitObject first = x.First();
-                    if (x.Skip(1).Any())
+                    if (x.Skip(1).Any() && !(first is Swell))
                         first.IsStrong = true;
                     return first;
                 }).ToList();
@@ -79,9 +79,9 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
             var curveData = obj as IHasCurve;
 
             // Old osu! used hit sounding to determine various hit type information
-            List<SampleInfo> samples = obj.Samples;
+            List<HitSampleInfo> samples = obj.Samples;
 
-            bool strong = samples.Any(s => s.Name == SampleInfo.HIT_FINISH);
+            bool strong = samples.Any(s => s.Name == HitSampleInfo.HIT_FINISH);
 
             if (distanceData != null)
             {
@@ -117,14 +117,15 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
 
                 if (!isForCurrentRuleset && tickSpacing > 0 && osuDuration < 2 * speedAdjustedBeatLength)
                 {
-                    List<List<SampleInfo>> allSamples = curveData != null ? curveData.RepeatSamples : new List<List<SampleInfo>>(new[] { samples });
+                    List<List<HitSampleInfo>> allSamples = curveData != null ? curveData.NodeSamples : new List<List<HitSampleInfo>>(new[] { samples });
 
                     int i = 0;
+
                     for (double j = obj.StartTime; j <= obj.StartTime + taikoDuration + tickSpacing / 8; j += tickSpacing)
                     {
-                        List<SampleInfo> currentSamples = allSamples[i];
-                        bool isRim = currentSamples.Any(s => s.Name == SampleInfo.HIT_CLAP || s.Name == SampleInfo.HIT_WHISTLE);
-                        strong = currentSamples.Any(s => s.Name == SampleInfo.HIT_FINISH);
+                        List<HitSampleInfo> currentSamples = allSamples[i];
+                        bool isRim = currentSamples.Any(s => s.Name == HitSampleInfo.HIT_CLAP || s.Name == HitSampleInfo.HIT_WHISTLE);
+                        strong = currentSamples.Any(s => s.Name == HitSampleInfo.HIT_FINISH);
 
                         if (isRim)
                         {
@@ -168,14 +169,13 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
                 {
                     StartTime = obj.StartTime,
                     Samples = obj.Samples,
-                    IsStrong = strong,
                     Duration = endTimeData.Duration,
                     RequiredHits = (int)Math.Max(1, endTimeData.Duration / 1000 * hitMultiplier)
                 };
             }
             else
             {
-                bool isRim = samples.Any(s => s.Name == SampleInfo.HIT_CLAP || s.Name == SampleInfo.HIT_WHISTLE);
+                bool isRim = samples.Any(s => s.Name == HitSampleInfo.HIT_CLAP || s.Name == HitSampleInfo.HIT_WHISTLE);
 
                 if (isRim)
                 {

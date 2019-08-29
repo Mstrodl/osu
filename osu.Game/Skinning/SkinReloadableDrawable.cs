@@ -1,5 +1,5 @@
-﻿// Copyright (c) 2007-2018 ppy Pty Ltd <contact@ppy.sh>.
-// Licensed under the MIT Licence - https://raw.githubusercontent.com/ppy/osu/master/LICENCE
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using System;
 using osu.Framework.Allocation;
@@ -36,12 +36,15 @@ namespace osu.Game.Skinning
             skin.SourceChanged += onChange;
         }
 
-        private void onChange() => SkinChanged(skin, allowDefaultFallback);
+        private void onChange() =>
+            // schedule required to avoid calls after disposed.
+            // note that this has the side-effect of components only performing a skin change when they are alive.
+            Scheduler.AddOnce(() => SkinChanged(skin, allowDefaultFallback));
 
         protected override void LoadAsyncComplete()
         {
             base.LoadAsyncComplete();
-            onChange();
+            SkinChanged(skin, allowDefaultFallback);
         }
 
         /// <summary>
@@ -51,6 +54,14 @@ namespace osu.Game.Skinning
         /// <param name="allowFallback">Whether fallback to default skin should be allowed if the custom skin is missing this resource.</param>
         protected virtual void SkinChanged(ISkinSource skin, bool allowFallback)
         {
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (skin != null)
+                skin.SourceChanged -= onChange;
         }
     }
 }
